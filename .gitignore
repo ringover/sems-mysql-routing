@@ -1,0 +1,10 @@
+*.a
+*.d
+*.so
+*.swp
+*.o
+core/sems
+tools/sems-logfile-callextract
+core/plug-in/stats/sems-stats
+core/compat/getos
+core/compat/getarch
