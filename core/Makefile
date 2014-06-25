@@ -118,8 +118,9 @@ install-cfg: $(DESTDIR)$(cfg-target) $(DESTDIR)$(app-cfg-target)
 			cp -f $(DESTDIR)$(cfg-target)sems.conf.default \
 				$(DESTDIR)$(cfg-target)sems.conf; \
 		fi
-
-		$(INSTALL-CFG) etc/app_mapping.conf.sample $(DESTDIR)$(app-cfg-target)app_mapping.conf
+		if [ ! -f $(DESTDIR)$(app-cfg-target)app_mapping.conf ]; then \
+			$(INSTALL-CFG) etc/app_mapping.conf.cmake $(DESTDIR)$(app-cfg-target)app_mapping.conf; \
+		fi
 
 install-bin: $(DESTDIR)$(bin-prefix)/$(bin-dir)
 		$(INSTALL-TOUCH) $(DESTDIR)$(bin-prefix)/$(bin-dir)$(NAME)

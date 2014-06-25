@@ -56,7 +56,7 @@
 #   RTP port is advertised in SDP in either case.
 #   
 # Example:
-#  public_ip=75.101.219.48
+public_ip=192.168.1.201
 #  
   
 # optional parameter: sip_port=<port_number>
@@ -69,7 +69,7 @@
 #  
 #   default: 5060
 #
-sip_port=5080
+sip_port=5090
 
 # optional parameter: outbound_proxy=uri
 #
@@ -174,7 +174,7 @@ rtp_high_port=60000
 # 
 # - sets the path to the plug-ins' binaries
 # - may be absolute or relative to CWD
-plugin_path=/usr/local/lib/sems/plug-in/
+plugin_path=/usr/local/sems/lib/plug-in/
 
 # optional parameter: load_plugins=<modules list>
 # 
@@ -182,7 +182,7 @@ plugin_path=/usr/local/lib/sems/plug-in/
 # If empty, all modules in plugin_path are loaded.
 #
 # example for announcement with only g711 and ilbc codecs  
-# load_plugins=wav;ilbc;announcement
+load_plugins=wav;sbc;cc_mysql;session_timer
 
 # optional parameter: exclude_plugins=<modules list>
 #
@@ -193,7 +193,7 @@ plugin_path=/usr/local/lib/sems/plug-in/
 # o precoded_announce: no precoded sample files present
 # o py_sems: conflicts with ivr (in some cases)
 # o db_reg_agent: needs DB tables
-exclude_plugins=precoded_announce;py_sems;db_reg_agent
+#exclude_plugins=precoded_announce;py_sems;db_reg_agent
 
 # optional: load_plugins_rtld_global=<modules list>
 #
@@ -223,13 +223,13 @@ exclude_plugins=precoded_announce;py_sems;db_reg_agent
 # application = $(mapping)
 # application = $(ruri.user)
 # application = $(ruri.param)
-application = $(apphdr)
+# application = $(apphdr)
 
 # parameter: plugin_config_path=<path>
 #
 # - in this path configuration files of the applications 
 #   (e.g. announcement.conf) are searched
-plugin_config_path=/usr/local/etc/sems/etc/
+plugin_config_path=/usr/local/sems/conf/etc/
 
 # optional parameter: exclude_payloads=<payload list>
 #
@@ -250,19 +250,19 @@ plugin_config_path=/usr/local/etc/sems/etc/
 # 
 # - specifies if sems should run in daemon mode (background)
 #   (fork=no is the same as -E)
-fork=yes
+fork=no
 
 # optional parameter: stderr={yes|no}
 #
 # - debug mode: do not fork and log to stderr
 #   (stderr=yes is the same as -E)
-stderr=no
+stderr=yes
 
 # optional parameter: loglevel={0|1|2|3}
 #
 # - sets log level (error=0, warning=1, info=2, debug=3)
 #   (same as -D)
-loglevel=2
+loglevel=1
 
 # optional parameter: syslog_facility={DAEMON|USER|LOCAL[0-7]}
 #
@@ -390,7 +390,7 @@ use_default_signature=yes
 #   Set server_signature=0 in ser_sems.cfg if you use it.   
 #
 #
-# signature="SEMS media server 1.0"
+signature="SEMS - MySQL"
 
 # optional parameter: single_codec_in_ok={yes|no}
 #
@@ -485,7 +485,7 @@ use_default_signature=yes
 #
 # Default: no
 #
-#disable_dns_srv=yes
+disable_dns_srv=yes
 
 # support 100rel (PRACK) extension (RFC3262)? [disabled|supported|require]
 #

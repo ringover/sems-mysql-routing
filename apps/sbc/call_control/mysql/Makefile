@@ -6,3 +6,4 @@ module_cflags  = -DMOD_NAME=\"$(plug_in_name)\"  -I$(sbc_app_path) -L/vagrant/li
 
 COREPATH =../../../../core
 include $(COREPATH)/plug-in/Makefile.app_module
+

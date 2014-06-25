@@ -22,4 +22,19 @@ install_call_control_mods:
 clean_call_control_mods:
 	-@$(MAKE) -C call_control/ clean
 
-
+install-cfg:
+	if [ ! -f $(DESTDIR)$(app-cfg-target)sbc.conf ]; then \
+		$(INSTALL-CFG) etc/sbc.conf $(DESTDIR)$(app-cfg-target)/sbc.conf; \
+	fi
+	if [ ! -f $(DESTDIR)$(app-cfg-target)standard.sbcprofile.conf ]; then \
+		$(INSTALL-CFG) etc/standard.sbcprofile.conf $(DESTDIR)$(app-cfg-target)/standard.sbcprofile.conf; \
+	fi
+	if [ ! -f $(DESTDIR)$(app-cfg-target)refuse.sbcprofile.conf ]; then \
+		$(INSTALL-CFG) etc/refuse.sbcprofile.conf $(DESTDIR)$(app-cfg-target)/refuse.sbcprofile.conf; \
+	fi
+	if [ ! -f $(DESTDIR)$(app-cfg-target)cc_mysql.conf ]; then \
+		$(INSTALL-CFG) call_control/mysql/etc/cc_mysql.conf $(DESTDIR)$(app-cfg-target)/cc_mysql.conf; \
+	fi
+	if [ ! -f $(DESTDIR)$(app-cfg-target)mysql.sbcprofile.conf ]; then \
+		$(INSTALL-CFG) call_control/mysql/etc/mysql.sbcprofile.conf $(DESTDIR)$(app-cfg-target)/mysql.sbcprofile.conf; \
+	fi

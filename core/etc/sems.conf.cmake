@@ -21,23 +21,28 @@
 # optional parameter: media_ip=<ip_address>|<device>
 # 
 # - this informs SEMS about the IP address or interface that 
-#   SEMS uses to send and receive media.  If not set, defaults 
-#   to first non-loopback interface.
+#   SEMS uses to send and receive media.  
+# - If neither 'media_ip' nor 'sip_ip' are set, defaults 
+#   to first non-loopback interface. If 'sip_ip' is set,
+#   'media_ip' defaults to 'sip_ip.
 #
 # Examples: 
 #  media_ip=10.0.0.34
 #  media_ip=eth0
 
-# optional parameter: sip_ip=<ip_address>
+# optional parameter: sip_ip=<ip_address>|<device>
 #
 # - this informs SEMS about the SIP IP where its SIP stack is 
 #   bound to or should be bound to. This also sets 
 #   the value used for contact header in outgoing calls and 
-#   registrations. If not set, defaults to first non-loopback
-#   interface.
+#   registrations.
+# - If neither 'media_ip' nor 'sip_ip' are set, defaults 
+#   to first non-loopback interface. If 'media_ip' is set,
+#   'sip_ip' defaults to 'media_ip.
 #
 # Example:
 #  sip_ip=10.0.0.34
+#  sip_ip=en0
 #
 
 # optional parameter: public_ip=<ip_address>
@@ -51,7 +56,7 @@
 #   RTP port is advertised in SDP in either case.
 #   
 # Example:
-#  public_ip=75.101.219.48
+public_ip=192.168.1.201
 #  
   
 # optional parameter: sip_port=<port_number>
@@ -64,7 +69,7 @@
 #  
 #   default: 5060
 #
-sip_port=5080
+sip_port=5090
 
 # optional parameter: outbound_proxy=uri
 #
@@ -86,13 +91,26 @@ sip_port=5080
 # optional parameter: force_outbound_proxy={yes|no}
 #
 # - forces SEMS to send any request to the outbound proxy in any
-#   situation. This option will only have an effect if the 
-#   outbound_proxy option has been set.
+#   situation, by adding an extra first Route to the outbound_proxy.
+#   This option will only have an effect if the outbound_proxy
+#   option has been set, and it will break 3261 compatibility
+#   in some cases; better use next_hop_ip/next_hop_port.
 #
 #   default: no
 #
 # Example:
 #   force_outbound_proxy=yes
+
+# optional parameter: next_hop=ip[:port]
+# - if this is set, all outgoing requests will be sent to
+#   this IP, regardless of R-URI etc.
+# next_hop=192.168.5.1
+# next_hop=192.168.5.1:5080
+
+# optional parameter:next_hop_for_replies
+# - use next_hop for replies, too?
+#
+#next_hop_for_replies=yes
 
 # optional parameter: rtp_low_port=<port>
 #
@@ -105,14 +123,25 @@ rtp_low_port=10000
 rtp_high_port=60000
 
 # Additional IFs (optional): 
-#   additional_interface = <list of interfaces>
+#   additional_interfaces = <list of interfaces>
+#
+# additional_interfaces must be set if more than one
+# interface is to be used for the same purpose (e.g.
+# more than one interface for SIP). Configure additional
+# interfaces if networks should be bridged or separate
+# networks should be served.
 #
 # For each additional interface, a set of parameters
-# suffixed with the interface name should be defined.
+# suffixed with the interface name should be listed
+# with the 'additional_interfaces' parameter.
 #
 # Please note that for each additional interface,
-# 'sip_ip' is mandatory. The other
-# parameters are optional.
+# 'sip_ip_[if_name]' is mandatory (but can be the interface
+# name, then the first assigned IP is used). The other
+# parameters are optional. 'media_ip_[if_name]'
+# is derived from 'sip_ip_[if_name]' if not set.
+# 'public_ip_[ip_name]' is also based on 'sip_ip_[if_name]'
+# if not set explicitly.
 # 
 # Example:
 #  additional_interfaces=intern,extern
@@ -145,7 +174,7 @@ rtp_high_port=60000
 # 
 # - sets the path to the plug-ins' binaries
 # - may be absolute or relative to CWD
-plugin_path=${SEMS_EXEC_PREFIX}/${SEMS_LIBDIR}/sems/plug-in/
+plugin_path=/usr/local/sems/lib/plug-in/
 
 # optional parameter: load_plugins=<modules list>
 # 
@@ -153,7 +182,7 @@ plugin_path=${SEMS_EXEC_PREFIX}/${SEMS_LIBDIR}/sems/plug-in/
 # If empty, all modules in plugin_path are loaded.
 #
 # example for announcement with only g711 and ilbc codecs  
-# load_plugins=wav;ilbc;announcement
+load_plugins=wav;sbc;cc_mysql;session_timer
 
 # optional parameter: exclude_plugins=<modules list>
 #
@@ -162,7 +191,14 @@ plugin_path=${SEMS_EXEC_PREFIX}/${SEMS_LIBDIR}/sems/plug-in/
 # This has only effect it load_plugins is not set.
 #
 # o precoded_announce: no precoded sample files present
-exclude_plugins=precoded_announce
+# o py_sems: conflicts with ivr (in some cases)
+# o db_reg_agent: needs DB tables
+#exclude_plugins=precoded_announce;py_sems;db_reg_agent
+
+# optional: load_plugins_rtld_global=<modules list>
+#
+# load these plugins with RTLD_GLOBAL (by default py_sems,
+# dsm, ivr, sbc, diameter_client, registrar_client, uac_auth)
 
 # optional parameter: application
 # 
@@ -187,13 +223,13 @@ exclude_plugins=precoded_announce
 # application = $(mapping)
 # application = $(ruri.user)
 # application = $(ruri.param)
-application = $(apphdr)
+# application = $(apphdr)
 
 # parameter: plugin_config_path=<path>
 #
 # - in this path configuration files of the applications 
 #   (e.g. announcement.conf) are searched
-plugin_config_path=${SEMS_CFG_PREFIX}/etc/sems/etc/
+plugin_config_path=/usr/local/sems/conf/etc/
 
 # optional parameter: exclude_payloads=<payload list>
 #
@@ -214,28 +250,19 @@ plugin_config_path=${SEMS_CFG_PREFIX}/etc/sems/etc/
 # 
 # - specifies if sems should run in daemon mode (background)
 #   (fork=no is the same as -E)
-fork=yes
+fork=no
 
 # optional parameter: stderr={yes|no}
 #
 # - debug mode: do not fork and log to stderr
 #   (stderr=yes is the same as -E)
-stderr=no
+stderr=yes
 
 # optional parameter: loglevel={0|1|2|3}
 #
 # - sets log level (error=0, warning=1, info=2, debug=3)
 #   (same as -D)
-loglevel=2
-
-# optional parameter: max_shutdown_time=<time in seconds>
-#
-# Limit on server shutdown time (time to send/resend BYE
-# to active calls). 0 to disable (infinite).
-#
-# Default: 10
-#
-#max_shutdown_time = 10
+loglevel=1
 
 # optional parameter: syslog_facility={DAEMON|USER|LOCAL[0-7]}
 #
@@ -265,6 +292,22 @@ loglevel=2
 # generated for each event that is posted into an event queue.
 #
 # log_events=yes
+
+# optional parameter: max_shutdown_time=<time in seconds>
+#
+# Limit on server shutdown time (time to send/resend BYE
+# to active calls). 0 to disable (infinite).
+#
+# Default: 10
+#
+#max_shutdown_time = 10
+
+# optional parameter: shutdown_mode_reply="<code> <reason>"
+#
+# Error reply that is used as reply to INVITE and OPTION
+# when SEMS is shutting down.
+#
+# Default: shutdown_mode_reply="503 Server shutting down"
 
 
 ############################################################
@@ -347,7 +390,7 @@ use_default_signature=yes
 #   Set server_signature=0 in ser_sems.cfg if you use it.   
 #
 #
-# signature="SEMS media server 1.0"
+signature="SEMS - MySQL"
 
 # optional parameter: single_codec_in_ok={yes|no}
 #
@@ -406,6 +449,44 @@ use_default_signature=yes
 #   default settings (i.e. leave out) for these should be OK
 #   for most applications
 
+# SIP timers configuration (in milliseconds)
+#
+# sip_timer_a=<n millisec>
+# sip_timer_b=<n millisec>
+# ...
+# sip_timer_m=<n millisec>
+#
+# timers A to J as in RFC3261.
+# Timer L: handle 200 ACKs automatically in INVITE client trans.
+# Timer M: cycle throught multiple addresses in case the R-URI
+#          resolves to multiple addresses
+#
+# Warning: Timer values are not checked whether they are appropriate!
+#          Leave to default values if in doubt.
+#
+# Example:
+#  # equivalent to fr_timer=20 in sip-router
+#  sip_timer_b=20000
+#  sip_timer_f=20000
+
+# sip_timer_t2=<n millisec)   T2 timer configuration
+#  (Cap for re-send request/response backoff)
+#
+# Warning: Timer values are not checked whether they are appropriate!
+#          Leave to default values if in doubt.
+#
+#sip_timer_t2=4000
+
+# skip DNS SRV lookup? [yes, no]
+#
+# according to RFC, if no port is specified, destination IP address
+# should be resolved with a DNS SRV lookup. If SEMS should not do that
+# (only an A record lookup), set disable_dns_srv=yes.
+#
+# Default: no
+#
+disable_dns_srv=yes
+
 # support 100rel (PRACK) extension (RFC3262)? [disabled|supported|require]
 #
 # disabled - disable support for 100rel
@@ -416,9 +497,20 @@ use_default_signature=yes
 #
 #100rel=require
 
+#
+# accept forked dialogs on UAS side? [yes|no]
+#
+#  no - INVITE with existing callid+remote_tag is replied with 482.
+# yes - INVITE with existing callid+remote_tag+via_branch is replied with 482.
+#       Forked INVITEs (!= via-branch) are accepted. 
+#
+# Default: yes
+#
+#accept_forked_dialogs=no
+
 # Make SIP authenticated requests sticky to the proxy? [yes | no]
 #
-# If enabled, host of request-URI of out-of-dialog requests that are
+# If enabled, host of request-URI of out-of-dialog requests that are 
 # authenticated with SIP auth is changed to the previously resolved
 # next-hop IP:port.
 #
@@ -426,10 +518,17 @@ use_default_signature=yes
 #
 # proxy_sticky_auth=yes
 
+# Ignore too low CSeq for NOTIFYs? [yes | no]
+#
+# May be necessary to interwork with simplistic/old SIP event notification 
+# implementations.
+#
+#ignore_notify_lower_cseq=yes
+
 #
 # Accept final replies without To-tag? [yes|no]
 #
-#accept_fr_without_totag=yes
+accept_fr_without_totag=yes
 
 #
 # Log raw messages?  [no|debug|info|warn|error]
@@ -457,4 +556,4 @@ use_default_signature=yes
 #
 # Default: 4
 #
-# sip_server_threads=8
+sip_server_threads=8
