@@ -88,9 +88,10 @@ class MysqlModule : public AmDynInvoke{
 
 #define table_current_calls "CREATE TABLE IF NOT EXISTS `current_calls` (" \
     "  `id` int(11) NOT NULL AUTO_INCREMENT," \
-    "  `caller` varchar(64) NOT NULL," \
-    "  `callee` varchar(64) NOT NULL," \
-    "  `server` varchar(64) DEFAULT NULL," \
+    "  `user_from` varchar(64) NOT NULL," \
+    "  `user_to` varchar(64) NOT NULL," \
+    "  `server_from` varchar(64) NOT NULL," \
+    "  `server_to` varchar(64) NOT NULL," \
     "  `start_time` timestamp NULL DEFAULT NULL," \
     "  `uuid` varchar(255) DEFAULT NULL," \
     "  `CREATION_DATE` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP," \
@@ -107,18 +108,20 @@ class MysqlModule : public AmDynInvoke{
 
 #define table_logs_sms "CREATE TABLE IF NOT EXISTS `logs_sms` (" \
     "  `id` int(11) NOT NULL AUTO_INCREMENT," \
-    "  `caller` varchar(64) NOT NULL," \
-    "  `callee` varchar(64) NOT NULL," \
-    "  `server` varchar(64) DEFAULT NULL," \
+    "  `user_from` varchar(64) NOT NULL," \
+    "  `user_to` varchar(64) NOT NULL," \
+    "  `server_from` varchar(64) NOT NULL," \
+    "  `server_to` varchar(64) NOT NULL," \
     "  `CREATION_DATE` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP," \
     "  PRIMARY KEY (`id`)" \
     ") ENGINE=MyISAM DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;"
 
 #define table_logs_calls "CREATE TABLE IF NOT EXISTS `logs_calls` (" \
     "  `id` int(11) NOT NULL AUTO_INCREMENT," \
-    "  `caller` varchar(64) NOT NULL," \
-    "  `callee` varchar(64) NOT NULL," \
-    "  `server` varchar(64) DEFAULT NULL," \
+    "  `user_from` varchar(64) NOT NULL," \
+    "  `user_to` varchar(64) NOT NULL," \
+    "  `server_from` varchar(64) NOT NULL," \
+    "  `server_to` varchar(64) NOT NULL," \
     "  `duration` int(11) NOT NULL DEFAULT '0'," \
     "  `start_time` timestamp NULL DEFAULT NULL," \
     "  `end_time` timestamp NULL DEFAULT NULL," \

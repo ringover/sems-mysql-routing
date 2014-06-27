@@ -17,7 +17,7 @@ USE `sbc`;
 
 CREATE USER sbc IDENTIFIED BY 'sbcsbc';
 
-GRANT INSERT,SELECT,UPDATE,DELETE ON sbc.* TO 'sbc'@'localhost' IDENTIFIED BY 'sbcsbc';
+GRANT CREATE,INSERT,SELECT,UPDATE,DELETE ON sbc.* TO 'sbc'@'localhost' IDENTIFIED BY 'sbcsbc';
 
 -- --------------------------------------------------------
 
