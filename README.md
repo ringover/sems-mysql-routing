@@ -57,24 +57,24 @@ And ZDB library :
       |-> used for the routing calls 
       eg: INSERT INTO `routes` (`number`,`dest`) VALUES ('0123456789','sip:0123456789@100.100.100.100:5060');
       
-    current_calls(id,caller,callee,server,start_time,uuid,creation_date) : 
+    current_calls(id,user_to,user_from,server_to,server_from,start_time,uuid,creation_date) : 
       |-> used for display of current calls 
-      eg: INSERT INTO `current_calls` (`caller`,`callee`,`server`,`start_time`,) VALUES ('0123456789','0987654321','80.80.80.80:5090','2014-06-24 14:57:27')
+      eg: INSERT INTO `current_calls` (`user_from`,`user_to`,`server_from`,`server_to`,`start_time`,) VALUES ('0987654321','0123456789','0987654321@80.80.80.80:5060','0123456789@100.100.100.100:5060','2014-06-24 14:57:27')
       
-    logs_calls(id,caller,callee,server,duration,start_time,end_time,creation_date)
+    logs_calls(id,user_to,user_from,server_to,server_from,duration,start_time,end_time,creation_date)
       |-> save the calls log 
-      eg: INSERT INTO `current_calls` (`caller`,`callee`,`server`,`duration`,`start_time`,`end_time`) VALUES ('0123456789','0987654321','80.80.80.80:5090','32','2014-06-24 14:57:27','2014-06-24 14:57:59');
+      eg: INSERT INTO `current_calls` (`user_from`,`user_to`,`server_from`,`server_to`,`duration`,`start_time`,`end_time`) VALUES ('0987654321','0123456789','0987654321@80.80.80.80:5060','0123456789@100.100.100.100:5060','32','2014-06-24 14:57:27','2014-06-24 14:57:59');
       
-    logs_sms(id,caller,callee,server,creation_date)
+    logs_sms(id,user_to,user_from,server_to,server_from,creation_date)
       |-> save the sms log
-      eg: INSERT INTO `current_calls` (`caller`,`callee`,`server`) VALUES ('0123456789','0987654321','80.80.80.80:5090');
+      eg: INSERT INTO `current_calls` (`user_from`,`user_to`,`server_from`,`server_to`) VALUES ('0987654321','0123456789','0987654321@80.80.80.80:5060','0123456789@100.100.100.100:5060');
 
 eg: We now have this routing type with the previous examples :
 If 0123456789 is registered in routes table, call scheme from 0987654321 to 0123456789.
 
     0987654321              Server              0123456789
         |                    | |                    |  
-        |       call         | |        call        |                
+        |      call/SMS      | |      call/SMS      |                
         |------------------->| |------------------->|
         |                    | |                    |
     80.80.80.80:5090                          100.100.100.100:5060
