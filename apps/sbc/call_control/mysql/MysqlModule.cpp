@@ -103,7 +103,7 @@ int MysqlModule::onLoad(){
     URL_T url = URL_new(url_str);
     pool = ConnectionPool_new(url);
     ConnectionPool_start(pool);
-    ConnectionPool_setMaxConnections(pool,10);
+    ConnectionPool_setMaxConnections(pool,100);
 
     Connection_T con = ConnectionPool_getConnection(pool);
     Connection_executeQuery(con,table_route);
@@ -167,23 +167,29 @@ void MysqlModule::start(const string& cc_name, const string& ltag,
   AmArg& res_cmd = res[0];
 
   data_sip *data = new data_sip;
-  GET_VALUES("FromUser",data->fromUser);
-  GET_VALUES("FromDomain",data->fromDomain);
-  GET_VALUES("ToUser",data->toUser);
-  GET_VALUES("ToDomain",data->toDomain);
+  GET_VALUES("From",data->from);
+  GET_VALUES("To",data->to);
   GET_VALUES("RURI",data->ruri);
+  data->fromUser   = string(data->from.begin(),data->from.begin()+data->from.find("@"));
+  data->fromDomain = string(data->from.begin()+data->from.find("@")+1,data->from.end());
+  data->toUser     = string(data->to.begin(),data->to.begin()+data->to.find("@"));
+  data->toDomain   = string(data->to.begin()+data->to.find("@")+1,data->to.end());
   data->methode = string(methode);
   data->uuid = string(ltag);
+  data->dest = data->to; //if routes tables isn't used.
   map_data.insert(pair<string,data_sip*>(string(ltag),data));
   
   if(tblRoutes == "true" || tblRoutes == "1"){
     Connection_T con = ConnectionPool_getConnection(pool);
+    Connection_ping(con);
+    Connection_clear(con);
   
     char query[200];
     sprintf(query,"SELECT dest FROM routes WHERE number = '%s' LIMIT 1",data->toUser.c_str());
     ResultSet_T result = Connection_executeQuery(con,query);
   
     if(ResultSet_next(result)){
+       data->dest         = ResultSet_getString(result, 1);
        call_profile->ruri = ResultSet_getString(result, 1);
        call_profile->to   = ResultSet_getString(result, 1);
     }else{
@@ -196,7 +202,13 @@ void MysqlModule::start(const string& cc_name, const string& ltag,
     }
 
     Connection_close(con);
+  }else{
+       call_profile->from = data->from;
+       call_profile->to   = data->to;
+       call_profile->ruri = data->ruri;
   }
+  data->destUser     = string(data->dest.begin(),data->dest.begin()+data->dest.find("@"));
+  data->destDomain   = string(data->dest.begin()+data->dest.find("@")+1,data->dest.end());
   return;
 }
 
@@ -206,14 +218,15 @@ void MysqlModule::connect(const string& cc_name, const string& ltag,
 			 int connect_ts_sec, int connect_ts_usec){
   data_sip *data = (data_sip*)map_data.find(ltag)->second;
   data->connect_ts_sec = connect_ts_sec;
+  char *date_start = timestamp2char(connect_ts_sec,"%Y-%m-%d %H:%M:%S");
   if(data->methode != "MESSAGE" && (tblCurrentCalls == "true" || tblCurrentCalls == "1")){
-    char *date_start = timestamp2char(connect_ts_sec,"%Y-%m-%d %H:%M:%S");
-
     char query[500];
-    sprintf(query,"INSERT INTO current_calls (caller, callee, server, uuid, start_time) VALUES ('%s','%s','%s','%s','%s')",data->fromUser.c_str(),data->toUser.c_str(),data->fromDomain.c_str(),ltag.c_str(),date_start);
+    sprintf(query,"INSERT INTO current_calls (user_from, user_to, server_from, server_to, uuid, start_time) VALUES ('%s','%s','%s','%s','%s','%s')",data->fromUser.c_str(),data->destUser.c_str(),data->from.c_str(),data->dest.c_str(),ltag.c_str(),date_start);
     free(date_start);
-
+    //DBG("query[%s]",query);
     Connection_T con = ConnectionPool_getConnection(pool);    
+    Connection_ping(con);
+    Connection_clear(con);
     ResultSet_T result = Connection_executeQuery(con,query);
     if(!result){
       ERROR("Query error [%s]", query);
@@ -234,9 +247,10 @@ void MysqlModule::end(const string& cc_name, const string& ltag,
   }
   if(data->methode == "MESSAGE" && (tblLogs == "true" || tblLogs == "1")){
     char query[200];
-    sprintf(query,"INSERT INTO logs_sms ( caller, callee, server) VALUES ('%s', '%s', '%s')",data->fromUser.c_str(),data->toUser.c_str(),data->fromDomain.c_str());
-
+    sprintf(query,"INSERT INTO logs_sms ( user_from, user_to, server_from, server_to) VALUES ('%s', '%s', '%s', '%s')",data->fromUser.c_str(),data->destUser.c_str(),data->from.c_str(),data->dest.c_str());
     Connection_T con = ConnectionPool_getConnection(pool);    
+    Connection_ping(con);
+    Connection_clear(con);
     ResultSet_T result = Connection_executeQuery(con,query);
     if(!result){
       ERROR("Query error [%s]", query);
@@ -246,15 +260,19 @@ void MysqlModule::end(const string& cc_name, const string& ltag,
     if(tblCurrentCalls == "true" || tblCurrentCalls == "1"){
       /*char query[200];
       int id = 0;
-      sprintf(query,"SELECT id FROM current_calls WHERE uuid = '%s'",ltag.c_str());
+      char *start_time;
+      sprintf(query,"SELECT id, start_time FROM current_calls WHERE uuid = '%s'",ltag.c_str());
       ResultSet_T result = Connection_executeQuery(con,query);
      
       if(ResultSet_next(result)){
         id = ResultSet_getString(result, 1);
+        start_time = ResultSet_getString(result, 1);
       }*/
       char query[200];
       sprintf(query,"DELETE FROM current_calls WHERE uuid = '%s'",ltag.c_str());
       Connection_T con = ConnectionPool_getConnection(pool);
+      Connection_ping(con);
+      Connection_clear(con);
       ResultSet_T result = Connection_executeQuery(con,query);
       if(!result){
          ERROR("Query error [%s]", query);
@@ -270,7 +288,7 @@ void MysqlModule::end(const string& cc_name, const string& ltag,
       ostringstream duration_str;
       duration_str << duration;
 
-      sprintf(query,"INSERT INTO logs_calls ( caller, callee, server, duration, start_time, end_time ) VALUES ('%s', '%s', '%s', '%s', '%s', '%s')",data->fromUser.c_str(),data->toUser.c_str(),data->fromDomain.c_str(),duration_str.str().c_str(),start_time,end_time);
+      sprintf(query,"INSERT INTO logs_calls ( user_from, user_to, server_from, server_to, duration, start_time, end_time ) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s')",data->fromUser.c_str(),data->destUser.c_str(),data->from.c_str(),data->dest.c_str(),duration_str.str().c_str(),start_time,end_time);
 
       Connection_T con = ConnectionPool_getConnection(pool);
       ResultSet_T result = Connection_executeQuery(con,query);

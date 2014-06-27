@@ -28,11 +28,11 @@ CPPFLAGS += -D_DEBUG \
 	  -DSEMS_VERSION='"$(RELEASE)"' -DARCH='"$(ARCH)"'\
 	  -DOS='"$(OS)"' 	\
 	  -DSYSTEM_SAMPLECLOCK_RATE=32000LL
-#         -DMAX_RTP_SESSIONS=8192 \
-#	  -DSUPPORT_IPV6 \
-#	  -DNO_THREADID_LOG \
-#         -DLOG_PRETTY_FUNCTION \
-#         -DLOG_LOC_DATA_ATEND
+          -DMAX_RTP_SESSIONS=8192 \
+	  -DSUPPORT_IPV6 \
+	  -DNO_THREADID_LOG \
+          -DLOG_PRETTY_FUNCTION \
+          -DLOG_LOC_DATA_ATEND
 
 
 # compile with session thread pool support?
@@ -44,7 +44,7 @@ CPPFLAGS += -D_DEBUG \
 #      if compiled without thread pool support, every
 #      session will have its own thread.
 #
-#USE_THREADPOOL = yes
+USE_THREADPOOL = yes
 
 # compile with spandsp DTMF detection? see soft-switch.org
 #   this needs a fairly new version of spandsp - tested with 0.0.4pre11
@@ -86,7 +86,7 @@ USE_MONITORING=yes
 # Support for long debug messages? (useful for debugging SIP messages' contents)
 #
 # disable for slight performance gain
-LONG_DEBUG_MESSAGE=yes
+#LONG_DEBUG_MESSAGE=yes
 
 # Is this a debug build or not?
 debug=no

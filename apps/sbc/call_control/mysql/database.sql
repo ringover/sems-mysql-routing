@@ -27,9 +27,10 @@ GRANT INSERT,SELECT,UPDATE,DELETE ON sbc.* TO 'sbc'@'localhost' IDENTIFIED BY 's
 
 CREATE TABLE IF NOT EXISTS `current_calls` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `caller` varchar(64) NOT NULL,
-  `callee` varchar(64) NOT NULL,
-  `server` varchar(64) DEFAULT NULL,
+  `user_from` varchar(64) NOT NULL,
+  `user_to` varchar(64) NOT NULL,
+  `server_from` varchar(128) NOT NULL,
+  `server_to` varchar(128) NOT NULL,
   `start_time` timestamp NULL DEFAULT NULL,
   `uuid` varchar(255) DEFAULT NULL,
   `CREATION_DATE` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -44,9 +45,10 @@ CREATE TABLE IF NOT EXISTS `current_calls` (
 
 CREATE TABLE IF NOT EXISTS `logs_calls` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `caller` varchar(64) NOT NULL,
-  `callee` varchar(64) NOT NULL,
-  `server` varchar(64) DEFAULT NULL,
+  `user_from` varchar(64) NOT NULL,
+  `user_to` varchar(64) NOT NULL,
+  `server_from` varchar(128) NOT NULL,
+  `server_to` varchar(128) NOT NULL,
   `duration` int(11) NOT NULL DEFAULT '0',
   `start_time` timestamp NULL DEFAULT NULL,
   `end_time` timestamp NULL DEFAULT NULL,
@@ -62,9 +64,10 @@ CREATE TABLE IF NOT EXISTS `logs_calls` (
 
 CREATE TABLE IF NOT EXISTS `logs_sms` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `caller` varchar(64) NOT NULL,
-  `callee` varchar(64) NOT NULL,
-  `server` varchar(64) DEFAULT NULL,
+  `user_from` varchar(64) NOT NULL,
+  `user_to` varchar(64) NOT NULL,
+  `server_from` varchar(128) NOT NULL,
+  `server_to` varchar(128) NOT NULL,
   `data` text,
   `CREATION_DATE` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)

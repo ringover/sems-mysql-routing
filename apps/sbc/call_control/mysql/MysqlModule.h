@@ -43,10 +43,15 @@
 #include "ampi/SBCCallControlAPI.h"
 
 typedef struct _data_sip{
+  string from;
   string fromUser;
   string fromDomain;
+  string to;
   string toUser;
   string toDomain;
+  string dest;
+  string destUser;
+  string destDomain;
   string ruri;
   string methode;
   string uuid;

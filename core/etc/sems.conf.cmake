@@ -41,7 +41,7 @@
 #   'sip_ip' defaults to 'media_ip.
 #
 # Example:
-#  sip_ip=10.0.0.34
+sip_ip=192.168.1.201
 #  sip_ip=en0
 #
 
@@ -225,6 +225,8 @@ load_plugins=wav;sbc;cc_mysql;session_timer
 # application = $(ruri.param)
 # application = $(apphdr)
 
+application = sbc
+
 # parameter: plugin_config_path=<path>
 #
 # - in this path configuration files of the applications 
@@ -321,7 +323,7 @@ loglevel=1
 #   (set USE_THREADPOOL in Makefile.defs)
 #   Defaults to 10
 #
-# session_processor_threads=50
+session_processor_threads=64
 
 # optional parameter: media_processor_threads=<num_value>
 # 
@@ -330,7 +332,7 @@ loglevel=1
 #   parameter to 1 (default), on MP systems to a higher
 #   value
 #
-# media_processor_threads=1
+media_processor_threads=16
 
 
 # optional parameter: session_limit=<limit>;<err code>;<err reason>
@@ -369,6 +371,7 @@ loglevel=1
 #    dead_rtp_time=0  
 #    # RTP timeout after 10 seconds
 #    dead_rtp_time=10  
+dead_rtp_time=30
 
 # optional parameter: use_default_signature={yes|no}
 #
@@ -409,6 +412,8 @@ signature="SEMS - MySQL"
 #   default=empty
 #
 # codec_order=iLBC,GSM
+
+codec_order=pcma,pcmu
 
 # optional parameter: ignore_rtpxheaders={yes|no}
 #
@@ -535,14 +540,14 @@ accept_fr_without_totag=yes
 #
 # Default: debug
 #
-#log_raw_messages=no
+log_raw_messages=no
 
 #
 # Log parsed received messages?  [yes|no]
 #
 # Default: yes
 #
-#log_parsed_messages=no
+log_parsed_messages=no
 
 # SIP UDP socket receive buffer size (in bytes)
 #
@@ -556,4 +561,8 @@ accept_fr_without_totag=yes
 #
 # Default: 4
 #
-sip_server_threads=8
+sip_server_threads=16
+
+
+
+

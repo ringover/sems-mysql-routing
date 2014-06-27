@@ -11,6 +11,6 @@
 #  lines starting with '#' and empty lines are ignored
 
 # standard applications
-^refuse=>refuse
 ^.*=>mysql
+^refuse=>refuse
 #^.*=>standard
