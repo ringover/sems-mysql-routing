@@ -40,6 +40,7 @@ And ZDB library :
     ./bootstrap
     ./configure
     make && make install
+    ldconfig
 
 ### Installed files using 'make install'
 
