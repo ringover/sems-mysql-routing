@@ -42,6 +42,10 @@ And ZDB library :
     make && make install
     ldconfig
 
+Install SEMS :
+
+    make && make install
+
 ### Installed files using 'make install'
 
     /usr/local/sems/bin                     : SEMS executable
