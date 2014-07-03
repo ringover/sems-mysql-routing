@@ -49,10 +49,12 @@ typedef struct _data_sip{
   string to;
   string toUser;
   string toDomain;
+  string ruri;
+  string ruriUser;
+  string ruriDomain;
   string dest;
   string destUser;
   string destDomain;
-  string ruri;
   string methode;
   string uuid;
   int connect_ts_sec;

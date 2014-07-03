@@ -165,33 +165,41 @@ void MysqlModule::start(const string& cc_name, const string& ltag,
            int timer_id, AmArg& res) {
   res.push(AmArg());
   AmArg& res_cmd = res[0];
-
   data_sip *data = new data_sip;
+
   GET_VALUES("From",data->from);
   GET_VALUES("To",data->to);
   GET_VALUES("RURI",data->ruri);
+  if(strncmp("sip:",data->from.c_str(),4) == 0) { data->from.erase(0,4); }
+  if(strncmp("sip:",data->to.c_str(),4) == 0)   { data->to.erase(0,4);   }
+  if(strncmp("sip:",data->ruri.c_str(),4) == 0) { data->ruri.erase(0,4); }
+
   data->fromUser   = string(data->from.begin(),data->from.begin()+data->from.find("@"));
   data->fromDomain = string(data->from.begin()+data->from.find("@")+1,data->from.end());
   data->toUser     = string(data->to.begin(),data->to.begin()+data->to.find("@"));
   data->toDomain   = string(data->to.begin()+data->to.find("@")+1,data->to.end());
+  data->ruriUser   = string(data->ruri.begin(),data->ruri.begin()+data->ruri.find("@"));
+  data->ruriDomain = string(data->ruri.begin()+data->ruri.find("@")+1,data->ruri.end());
+
   data->methode = string(methode);
   data->uuid = string(ltag);
-  data->dest = data->to; //if routes tables isn't used.
   map_data.insert(pair<string,data_sip*>(string(ltag),data));
   
   if(tblRoutes == "true" || tblRoutes == "1"){
+    char query[200];
+    sprintf(query,"SELECT dest FROM routes WHERE number = '%s' LIMIT 1",data->toUser.c_str());
+  
     Connection_T con = ConnectionPool_getConnection(pool);
     Connection_ping(con);
     Connection_clear(con);
   
-    char query[200];
-    sprintf(query,"SELECT dest FROM routes WHERE number = '%s' LIMIT 1",data->toUser.c_str());
     ResultSet_T result = Connection_executeQuery(con,query);
-  
     if(ResultSet_next(result)){
-       data->dest         = ResultSet_getString(result, 1);
-       call_profile->ruri = ResultSet_getString(result, 1);
-       call_profile->to   = ResultSet_getString(result, 1);
+       string buff        = ResultSet_getString(result, 1);
+       if(strncmp("sip:",buff.c_str(),4) == 0) { buff.erase(0,4); }
+       call_profile->ruri = "sip:" + buff;
+       call_profile->to   = "sip:" + buff;
+       data->dest         = buff;
     }else{
        ERROR("Query failed [%s]", query);
        res_cmd[SBC_CC_ACTION] = SBC_CC_REFUSE_ACTION;
@@ -203,9 +211,11 @@ void MysqlModule::start(const string& cc_name, const string& ltag,
 
     Connection_close(con);
   }else{
-       call_profile->from = data->from;
-       call_profile->to   = data->to;
-       call_profile->ruri = data->ruri;
+       GET_VALUES("dest",data->dest);
+       if(strncmp("sip:",data->dest.c_str(),4) == 0) { data->dest.erase(0,4); }
+       call_profile->ruri = "sip:" + data->dest;
+       call_profile->to   = "sip:" + data->dest;
+       call_profile->from = "sip:" + data->from;
   }
   data->destUser     = string(data->dest.begin(),data->dest.begin()+data->dest.find("@"));
   data->destDomain   = string(data->dest.begin()+data->dest.find("@")+1,data->dest.end());
@@ -218,19 +228,22 @@ void MysqlModule::connect(const string& cc_name, const string& ltag,
 			 int connect_ts_sec, int connect_ts_usec){
   data_sip *data = (data_sip*)map_data.find(ltag)->second;
   data->connect_ts_sec = connect_ts_sec;
-  char *date_start = timestamp2char(connect_ts_sec,"%Y-%m-%d %H:%M:%S");
+
   if(data->methode != "MESSAGE" && (tblCurrentCalls == "true" || tblCurrentCalls == "1")){
     char query[500];
+    char *date_start = timestamp2char(connect_ts_sec,"%Y-%m-%d %H:%M:%S");
     sprintf(query,"INSERT INTO current_calls (user_from, user_to, server_from, server_to, uuid, start_time) VALUES ('%s','%s','%s','%s','%s','%s')",data->fromUser.c_str(),data->destUser.c_str(),data->from.c_str(),data->dest.c_str(),ltag.c_str(),date_start);
-    free(date_start);
-    //DBG("query[%s]",query);
+
     Connection_T con = ConnectionPool_getConnection(pool);    
     Connection_ping(con);
     Connection_clear(con);
+
     ResultSet_T result = Connection_executeQuery(con,query);
     if(!result){
       ERROR("Query error [%s]", query);
     }
+
+    free(date_start);
     Connection_close(con);    
   }
   return;
@@ -248,35 +261,31 @@ void MysqlModule::end(const string& cc_name, const string& ltag,
   if(data->methode == "MESSAGE" && (tblLogs == "true" || tblLogs == "1")){
     char query[200];
     sprintf(query,"INSERT INTO logs_sms ( user_from, user_to, server_from, server_to) VALUES ('%s', '%s', '%s', '%s')",data->fromUser.c_str(),data->destUser.c_str(),data->from.c_str(),data->dest.c_str());
+
     Connection_T con = ConnectionPool_getConnection(pool);    
     Connection_ping(con);
     Connection_clear(con);
+
     ResultSet_T result = Connection_executeQuery(con,query);
     if(!result){
       ERROR("Query error [%s]", query);
     }
+
     Connection_close(con);
   }else{
     if(tblCurrentCalls == "true" || tblCurrentCalls == "1"){
-      /*char query[200];
-      int id = 0;
-      char *start_time;
-      sprintf(query,"SELECT id, start_time FROM current_calls WHERE uuid = '%s'",ltag.c_str());
-      ResultSet_T result = Connection_executeQuery(con,query);
-     
-      if(ResultSet_next(result)){
-        id = ResultSet_getString(result, 1);
-        start_time = ResultSet_getString(result, 1);
-      }*/
       char query[200];
       sprintf(query,"DELETE FROM current_calls WHERE uuid = '%s'",ltag.c_str());
+
       Connection_T con = ConnectionPool_getConnection(pool);
       Connection_ping(con);
       Connection_clear(con);
+
       ResultSet_T result = Connection_executeQuery(con,query);
       if(!result){
          ERROR("Query error [%s]", query);
       }
+
       Connection_close(con);
     }
     if(tblLogs == "true" || tblLogs == "1"){
@@ -295,6 +304,7 @@ void MysqlModule::end(const string& cc_name, const string& ltag,
       if(!result){
          ERROR("Query error [%s]", query);
       }
+
       free(start_time);
       free(end_time);
       Connection_close(con);    
