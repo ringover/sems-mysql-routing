@@ -40,6 +40,11 @@ And ZDB library :
     ./bootstrap
     ./configure
     make && make install
+    ldconfig
+
+Install SEMS :
+
+    make && make install
 
 ### Installed files using 'make install'
 
