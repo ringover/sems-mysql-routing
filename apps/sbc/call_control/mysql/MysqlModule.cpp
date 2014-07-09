@@ -211,11 +211,12 @@ void MysqlModule::start(const string& cc_name, const string& ltag,
 
     Connection_close(con);
   }else{
-       GET_VALUES("dest",data->dest);
+       GET_VALUES("RURI",data->dest);
        if(strncmp("sip:",data->dest.c_str(),4) == 0) { data->dest.erase(0,4); }
-       call_profile->ruri = "sip:" + data->dest;
-       call_profile->to   = "sip:" + data->dest;
-       call_profile->from = "sip:" + data->from;
+       GET_VALUES("RURI",call_profile->ruri);
+       GET_VALUES("To",call_profile->to);
+       GET_VALUES("From",call_profile->from);
+       GET_VALUES("Contact",call_profile->contact);
   }
   data->destUser     = string(data->dest.begin(),data->dest.begin()+data->dest.find("@"));
   data->destDomain   = string(data->dest.begin()+data->dest.find("@")+1,data->dest.end());
@@ -294,10 +295,10 @@ void MysqlModule::end(const string& cc_name, const string& ltag,
       char *end_time   = timestamp2char((unsigned int)end_ts_sec,"%Y-%m-%d %H:%M:%S");
 
       int duration = end_ts_sec - data->connect_ts_sec;
-      ostringstream duration_str;
-      duration_str << duration;
+      char duration_str[20] = "";
+      sprintf(duration_str,"%d",duration);
 
-      sprintf(query,"INSERT INTO logs_calls ( user_from, user_to, server_from, server_to, duration, start_time, end_time ) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s')",data->fromUser.c_str(),data->destUser.c_str(),data->from.c_str(),data->dest.c_str(),duration_str.str().c_str(),start_time,end_time);
+      sprintf(query,"INSERT INTO logs_calls ( user_from, user_to, server_from, server_to, duration, start_time, end_time ) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s')",data->fromUser.c_str(),data->destUser.c_str(),data->from.c_str(),data->dest.c_str(),duration_str,start_time,end_time);
 
       Connection_T con = ConnectionPool_getConnection(pool);
       ResultSet_T result = Connection_executeQuery(con,query);
