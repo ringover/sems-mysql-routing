@@ -237,7 +237,7 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
 		      "from", req.from.c_str(),
 		      "to", req.to.c_str(),
 		      "ruri", req.r_uri.c_str());
-     
+    
       if (req.method == "INVITE") {
          if (int err = session->sendInvite(req.hdrs)) {
            ERROR("INVITE could not be sent: error code = %d.\n", err);
@@ -246,7 +246,16 @@ string AmSessionContainer::startSessionUAC(const AmSipRequest& req, string& app_
            return "";
          }
       }
-      
+    
+      if (req.method == "MESSAGE") {
+         if (int err = session->sendMessage(req.hdrs)) {
+           ERROR("MESSAGE could not be sent: error code = %d.\n", err);
+           AmEventDispatcher::instance()->delEventQueue(req.from_tag);
+           MONITORING_MARK_FINISHED(req.from_tag.c_str());
+           return "";
+         }
+      }
+  
       if (AmConfig::LogSessions) {      
 	INFO("Starting UAC session %s app %s\n",
 	     req.from_tag.c_str(), app_name.c_str());

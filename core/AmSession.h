@@ -174,12 +174,12 @@ protected:
 
 public:
 
-//    REFRESH_REMESSAGE,         // use remessage
-//    REFRESH_UPDATE_FB_REMES    // use update or fallback to remessage
   enum SessionRefreshMethod {
     REFRESH_REINVITE = 0,      // use reinvite
     REFRESH_UPDATE,            // use update
     REFRESH_UPDATE_FB_REINV,   // use update or fallback to reinvite
+    REFRESH_UPDATE_FB_REMES,   // use update or fallback to remessage
+    REFRESH_REMESSAGE,         // use remessage
   };
   /** currently selected session refresh method */
   SessionRefreshMethod refresh_method;
@@ -348,18 +348,17 @@ public:
   /** send an UPDATE in the session */
   virtual int sendUpdate(const AmMimeBody* body, const string &hdrs);
 
-  /** send a Re-Message (if connected) */
-/*  virtual int sendRemessage(bool updateSDP = true, const string& headers = "",
-			   int flags = 0);*/
-  /** send an MESSAGE */
-//  virtual int sendMessage(const string& headers = "");
-
   /** send a Re-INVITE (if connected) */
   virtual int sendReinvite(bool updateSDP = true, const string& headers = "",
 			   int flags = 0);
 
   /** send an INVITE */
   virtual int sendInvite(const string& headers = "");
+
+  /** send an MESSAGE ans Re-MESSAGE (if connected)*/
+  virtual int sendMessage(const string& headers = "");
+  virtual int sendRemessage(bool updateSDP = true, const string& headers = "",
+			   int flags = 0);
 
   /** set the session on/off hold */
   virtual void setOnHold(bool hold);
@@ -490,6 +489,7 @@ public:
    * is sent in the session.
    */
   virtual void onOutgoingInvite(const string& headers) { }
+  virtual void onOutgoingMessage(const string& headers) { }
 
   /**
    * onCancel will be called if a CANCEL for a running
@@ -528,6 +528,9 @@ public:
   /** 2xx reply has been received for an INVITE transaction */
   virtual void onInvite2xx(const AmSipReply& reply);
 
+  /** 2xx reply has been received for an MESSAGE transaction */
+  virtual void onMessage2xx(const AmSipReply& reply);
+  
   virtual void onInvite1xxRel(const AmSipReply &);
 
   /** answer for a locally sent PRACK is received */

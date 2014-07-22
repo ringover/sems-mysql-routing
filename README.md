@@ -17,10 +17,6 @@ We have made a lot of tests using SEMS v 1.5, to build a robust call routing eng
 
       cc_mysql (usefull for routing call and/or SMS (SIP Message), current calls and CDR).
 
-### To do
-
- * SMS (SIP Message) reply is not implemented. For the moment, I answer a message SIP/200 OK every time.
-
 ## Install
 
 ### Requirements

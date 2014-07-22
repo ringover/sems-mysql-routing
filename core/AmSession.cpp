@@ -854,6 +854,11 @@ void AmSession::onSipReply(const AmSipReply& reply,
 }
 
 
+void AmSession::onMessage2xx(const AmSipReply& reply)
+{
+  if(dlg.getUACTrans(reply.cseq))
+    dlg.send_200_ack(reply.cseq);
+}
 
 void AmSession::onInvite2xx(const AmSipReply& reply)
 {
@@ -1205,6 +1210,20 @@ int AmSession::sendInvite(const string& headers)
   sdp.addPart(SIP_APPLICATION_SDP);
   return dlg.invite(headers, &sdp);
 }
+
+int AmSession::sendRemessage(bool updateSDP, const string& headers, int flags) 
+{
+  return dlg.remessage(headers, NULL, flags);
+}
+
+int AmSession::sendMessage(const string& headers)
+{
+  //onOutgoingInvite(headers);
+  onOutgoingMessage(headers);
+
+  return dlg.message(headers, NULL);
+}
+
 
 void AmSession::setOnHold(bool hold)
 {

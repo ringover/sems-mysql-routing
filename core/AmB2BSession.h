@@ -89,11 +89,13 @@ struct B2BConnectEvent: public B2BEvent
 {
   string remote_party;
   string remote_uri;
+  string method;
 
   AmMimeBody body;
   string hdrs;
   
   bool relayed_invite;
+  bool relayed_message;
   unsigned int r_cseq;
 
   B2BConnectEvent(const string& remote_party,
@@ -102,6 +104,8 @@ struct B2BConnectEvent: public B2BEvent
     remote_party(remote_party),
     remote_uri(remote_uri),
     relayed_invite(false),
+    relayed_message(false),
+    method(SIP_METH_INVITE),
     r_cseq(0)
   {}
 };
@@ -189,6 +193,7 @@ class AmB2BSession: public AmSession
   void onSipReply(const AmSipReply& reply, AmSipDialog::Status old_dlg_status);
 
   void onInvite2xx(const AmSipReply& reply);
+  void onMessage2xx(const AmSipReply& reply);
 
   int onSdpCompleted(const AmSdp& local_sdp, const AmSdp& remote_sdp);
 
@@ -312,12 +317,15 @@ class AmB2BCallerSession: public AmB2BSession
 
  private:
   int  reinviteCaller(const AmSipReply& callee_reply);
+  int  remessageCaller(const AmSipReply& callee_reply);
 
  protected:
   // Callee Status
   CalleeStatus callee_status;
   
-  AmSipRequest invite_req;
+  AmSipRequest invite_req;//invite
+  AmSipRequest* message_req;//invite and message (message_req = &invite_req)
+
   virtual void createCalleeSession();
   int relayEvent(AmEvent* ev);
 
@@ -340,11 +348,17 @@ class AmB2BCallerSession: public AmB2BSession
 		     const string& remote_uri,
 		     bool relayed_invite = false);
 
+  void connectCallee(const string& remote_party,
+		     const string& remote_uri,
+		     bool relayed,
+                     string method);
+
   const AmSipRequest& getOriginalRequest() { return invite_req; }
 
   // @see AmSession
   void onInvite(const AmSipRequest& req);
   void onMessage(const AmSipRequest& req);
+  void onMessage2xx(const AmSipReply& reply);
   void onInvite2xx(const AmSipReply& reply);
   void onCancel(const AmSipRequest& req);
   void onBye(const AmSipRequest& req);
@@ -359,6 +373,7 @@ class AmB2BCallerSession: public AmB2BSession
   virtual void onB2BEvent(B2BEvent* ev);
 
   AmSipRequest* getInviteReq() { return &invite_req; }
+  AmSipRequest* getMessageReq() { return message_req; }
 
   void set_sip_relay_early_media_sdp(bool r);
 

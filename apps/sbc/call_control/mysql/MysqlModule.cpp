@@ -207,8 +207,9 @@ void MysqlModule::start(const string& cc_name, const string& ltag,
        res_cmd[SBC_CC_REFUSE_REASON] = "Not Found";
        free(data);
        map_data.erase(ltag);
+       Connection_close(con);
+       return;
     }
-
     Connection_close(con);
   }else{
        GET_VALUES("RURI",data->dest);

@@ -263,6 +263,14 @@ private:
   int update(const AmMimeBody* body, 
             const string &hdrs);
 
+  /** Message */
+  int remessage(const string& hdrs,
+	       const AmMimeBody* body,
+	       int flags = 0);
+  int message(const string& hdrs,  
+	     const AmMimeBody* body);
+
+
   /** @return 0 on success */
   int reinvite(const string& hdrs,
 	       const AmMimeBody* body,

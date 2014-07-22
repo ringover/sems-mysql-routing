@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS `current_calls` (
   `uuid` varchar(255) DEFAULT NULL,
   `CREATION_DATE` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+) ENGINE=MEMORY  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 

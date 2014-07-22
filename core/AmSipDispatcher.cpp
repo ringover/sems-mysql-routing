@@ -92,7 +92,7 @@ void AmSipDispatcher::handleSipMsg(AmSipRequest &req)
       AmSessionContainer::instance()->startSessionUAS(req);
   }
   else if ( req.method == SIP_METH_MESSAGE ){
-      AmSessionContainer::instance()->startSessionUAS(req);
+    AmSessionContainer::instance()->startSessionUAS(req);
   }
   else if(req.method == SIP_METH_CANCEL){
       

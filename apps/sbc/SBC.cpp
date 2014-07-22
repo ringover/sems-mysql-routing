@@ -35,6 +35,7 @@ SBC - feature-wishlist
 
 #include "ampi/SBCCallControlAPI.h"
 
+
 #include "log.h"
 #include "AmUtils.h"
 #include "AmAudio.h"
@@ -43,6 +44,7 @@ SBC - feature-wishlist
 #include "AmConfigReader.h"
 #include "AmSessionContainer.h"
 #include "AmSipHeaders.h"
+#include "AmEventDispatcher.h"
 
 #include "HeaderFilter.h"
 #include "ParamReplacer.h"
@@ -498,7 +500,7 @@ string SBCFactory::getActiveProfileMatch(string& profile_rule, const AmSipReques
 }
 
 AmSession* SBCFactory::onMessage(const AmSipRequest& req, const string& app_name, const map<string,string>& app_params){
-//	return new SMSDialog(); 
+	//return new SMSDialog(); 
 //}
 
 //  throw AmSession::Exception(488,"Not accepted here");
@@ -1156,11 +1158,6 @@ void SBCDialog::onMessage(const AmSipRequest& req){
     }
   }
 
-//  if(dlg.reply(req, 100, "Connecting") != 0) {
-//    throw AmSession::Exception(500,"Failed to reply 100");
-//  }
-
-
   if (!call_profile.evaluate(REPLACE_VALS)) {
     ERROR("call profile evaluation failed\n");
     throw AmSession::Exception(500, SIP_REPLY_SERVER_INTERNAL_ERROR);
@@ -1180,11 +1177,9 @@ void SBCDialog::onMessage(const AmSipRequest& req){
   from = call_profile.from.empty() ? req.from : call_profile.from;
   to = call_profile.to.empty() ? req.to : call_profile.to;
   callid = call_profile.callid;
-/*
-//  m_state = BB_Dialing;
 
-//  invite_req = req;
-//  est_invite_cseq = req.cseq;
+  *message_req = req;
+  est_invite_cseq = req.cseq;
 
   removeHeader(invite_req.hdrs,PARAM_HDR);
   removeHeader(invite_req.hdrs,"P-App-Name");
@@ -1193,9 +1188,9 @@ void SBCDialog::onMessage(const AmSipRequest& req){
     removeHeader(invite_req.hdrs,SIP_HDR_SESSION_EXPIRES);
     removeHeader(invite_req.hdrs,SIP_HDR_MIN_SE);
   }
-
-//  inplaceHeaderFilter(invite_req.hdrs,
-//		      call_profile.headerfilter_list, call_profile.headerfilter);
+ 
+  inplaceHeaderFilter(invite_req.hdrs,
+		      call_profile.headerfilter_list, call_profile.headerfilter);
 
   if (call_profile.append_headers.size() > 2) {
     string append_headers = call_profile.append_headers;
@@ -1206,132 +1201,28 @@ void SBCDialog::onMessage(const AmSipRequest& req){
   if (call_profile.outbound_interface_value >= 0)
     outbound_interface = call_profile.outbound_interface_value;
 
-  dlg.setOAEnabled(false); // ???
-*/
-  DBG("===================SIP MESSAGE");
+  DBG("========== SIP %s ==========", req.method.c_str());
   DBG("|     Ruri:   '%s'\n",ruri.c_str());
   DBG("|     From:   '%s'\n",from.c_str());
   DBG("|     To:     '%s'\n",to.c_str());
-  DBG("|     Methode '%s'\n",req.method.c_str());
-  DBG("|->connectCallee==============");
-//  connectCallee(to, ruri, true);
-//////connectCallee//////
-  DBG("SMSDialog::connectCallee ==========> ");
-  if(callee_status != None)
-      terminateOtherLeg();
+  DBG("|     Len Mes:'%d'\n",req.body.getLen());
+//  DBG("|     Message:'%s'\n",req.body.getPayload());
+  DBG("=================================");
 
-  B2BConnectEvent* ev = new B2BConnectEvent(to,ruri);
-  ev->body           = invite_req.body;
-  ev->hdrs           = invite_req.hdrs;
-  ev->relayed_invite = true;
-  ev->r_cseq         = invite_req.cseq;
-/////
-  DBG("SMSDialog::relayEvent ==========> ");
-  DBG("B2BConnectLeg=%d",B2BConnectLeg);
-  DBG("B2BSipRequest=%d",B2BSipRequest);
-  DBG("B2BSipReply=%d",B2BSipReply);
-  DBG("ev->event_id%d",ev->event_id);
-////
-  if(ev->event_id == B2BConnectLeg){
-    DBG("ev->event_id == B2BConnectLeg");
-    B2BConnectEvent* co_ev = dynamic_cast<B2BConnectEvent*>(ev);
-    if (!co_ev)
-      return;
-
-    DBG("getLocalTag:%s | b2b_leg:%s | to%s | ruri%s",getLocalTag().c_str(), other_id.c_str(),
-          co_ev->remote_party.c_str(), co_ev->remote_uri.c_str());
-
-    dlg.remote_party = co_ev->remote_party;
-    dlg.remote_uri   = co_ev->remote_uri;
-
-    DBG("=== AmB2BCalleeSession::onB2BEvent co_ev->relayed_invite=%d", co_ev->relayed_invite);
-
-    if (co_ev->relayed_invite) {
-      relayed_req[dlg.cseq] =
-        AmSipTransaction(SIP_METH_MESSAGE,co_ev->r_cseq, trans_ticket());
-    }
-
-    /*AmMimeBody r_body(co_ev->body);
-    DBG("hdrs:%s",co_ev->hdrs.c_str());
-    const AmMimeBody* body = &co_ev->body;*/
-    //int res = dlg.sendRequest(SIP_METH_MESSAGE, body,co_ev->hdrs, SIP_FLAGS_VERBATIM);
-    int res = relaySip(req);
-    if (res < 0) {
-      DBG("sending MESSAGE failed, relaying back error reply\n");
-      AmSipReply n_reply;
-      //errCode2RelayedReply(n_reply, res, 400);
-      if(res> -399 && res > -700)
-         n_reply.code = -res;
-      else
-         n_reply.code = res;
-      n_reply.reason="Bad Request";
-      n_reply.cseq = co_ev->r_cseq;
-      n_reply.from_tag = dlg.local_tag;
-      DBG("relaying B2B SIP reply %u %s\n", n_reply.code, n_reply.reason.c_str());
-      relayEvent(new B2BSipReplyEvent(n_reply, co_ev->relayed_invite, SIP_METH_MESSAGE));
-
-      if (co_ev->relayed_invite)
-        relayed_req.erase(dlg.cseq);
-
-      setStopped();
-      return;
-    }
-  }/* else if(ev->event_id == B2BSipRequest){
-    DBG("ev->event_id == B2BSipRequest");
-    //B2BSipRequestEvent *ev = new B2BSipResquestEvent(req,true);
-    B2BSipRequestEvent *req_ev = dynamic_cast<B2BSipRequestEvent*>(ev);
-    assert(req_ev);
-    inplaceHeaderFilter(req_ev->req.hdrs,
-                        call_profile.headerfilter_list, call_profile.headerfilter);
-    int res = relaySip(req_ev->req);
-    if(res < 0) {
-       // reply relayed request internally
-       AmSipReply n_reply;
-       if(res> -399 && res > -700)
-          n_reply.code = -res;
-       else
-          n_reply.code = res;
-       n_reply.reason="Bad Request";
-       //errCode2RelayedReply(n_reply, res, 500);
-       n_reply.cseq = req_ev->req.cseq;
-       n_reply.from_tag = dlg.local_tag;
-       DBG("relaying B2B SIP error reply %u %s\n", n_reply.code, n_reply.reason.c_str());
-       relayEvent(new B2BSipReplyEvent(n_reply, true, req_ev->req.method));
-       return;
-    }
-  }*/ else if (ev->event_id == B2BSipReply) {
-    DBG("++++++++++++++++++++++++++++++++++++++++++++++++++++++++ev->event_id == B2BSipReply");
-    /*if(isActiveFilter(call_profile.headerfilter) ||
-       call_profile.reply_translations.size()) {
-       B2BSipReplyEvent* reply_ev = dynamic_cast<B2BSipReplyEvent*>(ev);
-       assert(reply_ev);
-       // header filter
-       if(isActiveFilter(call_profile.headerfilter)) {
-          inplaceHeaderFilter(reply_ev->reply.hdrs, call_profile.headerfilter_list, call_profile.headerfilter);
-       }
-       // reply translations
-       map<unsigned int, pair<unsigned int, string> >::iterator it = call_profile.reply_translations.find(reply_ev->reply.code);
-       if (it != call_profile.reply_translations.end()) {
-         DBG("translating reply %u %s => %u %s\n",
-             reply_ev->reply.code, reply_ev->reply.reason.c_str(),
-             it->second.first, it->second.second.c_str());
-         reply_ev->reply.code = it->second.first;
-         reply_ev->reply.reason = it->second.second;
-       }
-    }*/
-  }
-
-  dlg.reply(req,200,"OK");
-  terminateOtherLeg();
-  terminateLeg();
-  CCEnd();
-  //AmB2BCallerSession::relayEvent(ev);
-  //AmB2BSession::relayEvent(ev);
+  connectCallee(to, ruri, true, SIP_METH_MESSAGE);
 }
 
 void SBCDialog::onInvite(const AmSipRequest& req)
 {
   AmUriParser ruri_parser, from_parser, to_parser;
+
+  DBG("===================SIP INVITE");
+  DBG("|     r_uri:    '%s'\n",req.r_uri.c_str());
+  DBG("|     User:     '%s'\n",req.user.c_str());
+  DBG("|     from_uri: '%s'\n",req.from_uri.c_str());
+  DBG("|     domaine   '%s'\n",req.domain.c_str());
+  DBG("|->connectCallee==============");
+
 
   DBG("processing initial %s %s\n", req.method.c_str(), req.r_uri.c_str());
 

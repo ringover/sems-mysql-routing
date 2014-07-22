@@ -134,7 +134,7 @@ void AmSipDialog::onRxRequest(const AmSipRequest& req)
   if ((req.method != SIP_METH_ACK) && (req.method != SIP_METH_CANCEL)) {
 
     // Sanity checks
-    if (r_cseq_i && req.cseq <= r_cseq){
+    if (r_cseq_i && req.cseq <= r_cseq && req.method != SIP_METH_MESSAGE){
       string hdrs; bool i = false;
       if (req.method == SIP_METH_NOTIFY) {
 	if (AmConfig::IgnoreNotifyLowerCSeq)
@@ -153,7 +153,7 @@ void AmSipDialog::onRxRequest(const AmSipRequest& req)
       }
     }
 
-    if (req.method == SIP_METH_INVITE) {
+    if (req.method == SIP_METH_INVITE || req.method == SIP_METH_MESSAGE) {
       bool pending = pending_invites;
       if (offeranswer_enabled) {
 	  // not sure this is needed here: could be in AmOfferAnswer as well
@@ -177,8 +177,9 @@ void AmSipDialog::onRxRequest(const AmSipRequest& req)
     
     // target refresh requests
     if (req.from_uri.length() && 
-	(req.method == SIP_METH_INVITE || 
-	 req.method == SIP_METH_UPDATE ||
+	(req.method == SIP_METH_INVITE    || 
+	 req.method == SIP_METH_MESSAGE   ||
+	 req.method == SIP_METH_UPDATE    ||
 	 req.method == SIP_METH_SUBSCRIBE ||
 	 req.method == SIP_METH_NOTIFY)) {
 
@@ -494,7 +495,7 @@ void AmSipDialog::onRxReply(const AmSipReply& reply)
     hdl->onSipReply(reply, saved_status);
 
   if(reply.code >= 200){
-    if((reply.code < 300) && (trans_method == SIP_METH_INVITE)) {
+    if((reply.code < 300) && (trans_method == SIP_METH_INVITE || trans_method == SIP_METH_MESSAGE)) {
 
 	if(hdl) {
 	    hdl->onInvite2xx(reply);
@@ -900,6 +901,21 @@ int AmSipDialog::bye(const string& hdrs, int flags)
     }	
 }
 
+int AmSipDialog::remessage(const string& hdrs,  
+			  const AmMimeBody* body,
+			  int flags)
+{
+  if(status == Connected) {
+    return sendRequest("MESSAGE", body, hdrs, flags);
+  }
+  else {
+    DBG("remessage(): we are not connected "
+	"(status=%s). do nothing!\n",getStatusStr());
+  }
+
+  return -1;
+}
+
 int AmSipDialog::reinvite(const string& hdrs,  
 			  const AmMimeBody* body,
 			  int flags)
@@ -909,6 +925,23 @@ int AmSipDialog::reinvite(const string& hdrs,
   }
   else {
     DBG("reinvite(): we are not connected "
+	"(status=%s). do nothing!\n",getStatusStr());
+  }
+
+  return -1;
+}
+
+int AmSipDialog::message(const string& hdrs,  
+			const AmMimeBody* body)
+{
+  if(status == Disconnected) {
+    int res = sendRequest("MESSAGE", body, hdrs);
+    DBG("TODO: is status already 'trying'? status=%s\n",getStatusStr());
+    //status = Trying;
+    return res;
+  }
+  else {
+    DBG("message(): we are already connected "
 	"(status=%s). do nothing!\n",getStatusStr());
   }
 
