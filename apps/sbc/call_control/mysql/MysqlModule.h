@@ -57,7 +57,6 @@ typedef struct _data_sip{
   string destDomain;
   string methode;
   string uuid;
-  int connect_ts_sec;
 }data_sip;
 
 class MysqlModule : public AmDynInvoke{

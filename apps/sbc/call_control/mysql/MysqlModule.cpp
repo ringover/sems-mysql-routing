@@ -10,7 +10,7 @@ static map<string,data_sip*> map_data;
     if(values.hasMember(cfgparam)){                          \
           dst = (string)string(values[cfgparam].asCStr());   \
     }
-
+/*
 static char* timestamp2char(unsigned int connect_ts_sec, const char *format){
     char *date = (char*)malloc(sizeof(char)*80);
     memset(date,0,sizeof(char)*80);
@@ -21,15 +21,15 @@ static char* timestamp2char(unsigned int connect_ts_sec, const char *format){
     return date;
 }
 
-/*static unsigned int char2timestamp(char *date, const char *format){
+static unsigned int char2timestamp(char *date, const char *format){
     unsigned int timestamp = 0;
     struct tm info;
     if(strptime(date,format,&info) != NULL){
         timestamp = (unsigned int)mktime(&info);
     }
     return timestamp;
-}*/
-
+}
+*/
 class MysqlModuleFactory : public AmDynInvokeFactory{
 public:
     MysqlModuleFactory(const string& name)
@@ -229,12 +229,10 @@ void MysqlModule::connect(const string& cc_name, const string& ltag,
 			 const string& other_tag,
 			 int connect_ts_sec, int connect_ts_usec){
   data_sip *data = (data_sip*)map_data.find(ltag)->second;
-  data->connect_ts_sec = connect_ts_sec;
 
   if(data->methode != "MESSAGE" && (tblCurrentCalls == "true" || tblCurrentCalls == "1")){
     char query[500];
-    char *date_start = timestamp2char(connect_ts_sec,"%Y-%m-%d %H:%M:%S");
-    sprintf(query,"INSERT INTO current_calls (user_from, user_to, server_from, server_to, uuid, start_time) VALUES ('%s','%s','%s','%s','%s','%s')",data->fromUser.c_str(),data->destUser.c_str(),data->from.c_str(),data->dest.c_str(),ltag.c_str(),date_start);
+    sprintf(query,"INSERT INTO current_calls (user_from, user_to, server_from, server_to, uuid, start_time) VALUES ('%s','%s','%s','%s','%s', NOW())", data->fromUser.c_str(), data->destUser.c_str(), data->from.c_str(), data->dest.c_str(), ltag.c_str());
 
     Connection_T con = ConnectionPool_getConnection(pool);    
     Connection_ping(con);
@@ -245,7 +243,6 @@ void MysqlModule::connect(const string& cc_name, const string& ltag,
       ERROR("Query error [%s]", query);
     }
 
-    free(date_start);
     Connection_close(con);    
   }
   return;
@@ -262,7 +259,7 @@ void MysqlModule::end(const string& cc_name, const string& ltag,
   }
   if(data->methode == "MESSAGE" && (tblLogs == "true" || tblLogs == "1")){
     char query[200];
-    sprintf(query,"INSERT INTO logs_sms ( user_from, user_to, server_from, server_to) VALUES ('%s', '%s', '%s', '%s')",data->fromUser.c_str(),data->destUser.c_str(),data->from.c_str(),data->dest.c_str());
+    sprintf(query,"INSERT INTO logs_sms ( user_from, user_to, server_from, server_to) VALUES ('%s', '%s', '%s', '%s')", data->fromUser.c_str(), data->destUser.c_str(), data->from.c_str(), data->dest.c_str());
 
     Connection_T con = ConnectionPool_getConnection(pool);    
     Connection_ping(con);
@@ -275,9 +272,45 @@ void MysqlModule::end(const string& cc_name, const string& ltag,
 
     Connection_close(con);
   }else{
+    char *start_time = NULL;
+    if(tblLogs == "true" || tblLogs == "1"){
+      char query[200];
+
+      sprintf(query,"SELECT start_time FROM current_calls WHERE uuid = '%s'",ltag.c_str());
+
+      Connection_T con = ConnectionPool_getConnection(pool);
+      Connection_ping(con);
+      Connection_clear(con);
+  
+      ResultSet_T result = Connection_executeQuery(con,query);
+      if(ResultSet_next(result)){
+    	const char *tmp = ResultSet_getString(result, 1);
+        start_time = (char*)calloc(strlen(tmp)+1,sizeof(char));
+	strncpy(start_time,(char*)tmp,strlen(tmp));
+      }else{
+        ERROR("Query error [%s]", query);
+      }
+      Connection_close(con);
+    }
     if(tblCurrentCalls == "true" || tblCurrentCalls == "1"){
       char query[200];
+
       sprintf(query,"DELETE FROM current_calls WHERE uuid = '%s'",ltag.c_str());
+
+      Connection_T con = ConnectionPool_getConnection(pool);
+      Connection_ping(con);
+      Connection_clear(con);
+
+      ResultSet_T result = Connection_executeQuery(con,query);
+      if(!result){
+        ERROR("start time error because -> Query error [%s]", query);
+      }
+
+      Connection_close(con);
+    }
+    if((tblLogs == "true" || tblLogs == "1") && start_time != NULL){
+      char query[200];
+      sprintf(query,"INSERT INTO logs_calls ( user_from, user_to, server_from, server_to, duration, start_time, end_time ) VALUES ('%s', '%s', '%s', '%s', UNIX_TIMESTAMP(NOW())-UNIX_TIMESTAMP('%s'), '%s', NOW())", data->fromUser.c_str(), data->destUser.c_str(), data->from.c_str(), data->dest.c_str(), start_time, start_time);
 
       Connection_T con = ConnectionPool_getConnection(pool);
       Connection_ping(con);
@@ -287,29 +320,10 @@ void MysqlModule::end(const string& cc_name, const string& ltag,
       if(!result){
          ERROR("Query error [%s]", query);
       }
-
-      Connection_close(con);
-    }
-    if(tblLogs == "true" || tblLogs == "1"){
-      char query[200];
-      char *start_time = timestamp2char((unsigned int)data->connect_ts_sec,"%Y-%m-%d %H:%M:%S");
-      char *end_time   = timestamp2char((unsigned int)end_ts_sec,"%Y-%m-%d %H:%M:%S");
-
-      int duration = end_ts_sec - data->connect_ts_sec;
-      char duration_str[20] = "";
-      sprintf(duration_str,"%d",duration);
-
-      sprintf(query,"INSERT INTO logs_calls ( user_from, user_to, server_from, server_to, duration, start_time, end_time ) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s')",data->fromUser.c_str(),data->destUser.c_str(),data->from.c_str(),data->dest.c_str(),duration_str,start_time,end_time);
-
-      Connection_T con = ConnectionPool_getConnection(pool);
-      ResultSet_T result = Connection_executeQuery(con,query);
-      if(!result){
-         ERROR("Query error [%s]", query);
-      }
-
-      free(start_time);
-      free(end_time);
       Connection_close(con);    
+    }
+    if(start_time != NULL){
+      free((void*)start_time);
     }
   }
   free(data);
